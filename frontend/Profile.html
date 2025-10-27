@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bugify - Profile</title>
+    <link rel="icon" type="image/png" href="assets/bug.png" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .nav-brand {
+            font-size: 1.8rem;
+            font-weight: 700;
+            padding: 20px 0;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 5px;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 30px;
+        }
+
+        .page-header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .page-header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .profile-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+        }
+
+        .profile-card {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+
+        .profile-avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 4rem;
+            color: white;
+        }
+
+        .profile-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .profile-role {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .profile-role.admin {
+            background: #f8d7da;
+            color: #842029;
+        }
+
+        .profile-role.developer {
+            background: #cfe2ff;
+            color: #084298;
+        }
+
+        .profile-role.user {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+
+        .profile-email {
+            color: #666;
+            font-size: 1rem;
+            margin-bottom: 30px;
+        }
+
+        .profile-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .profile-details {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .details-section {
+            margin-bottom: 40px;
+        }
+
+        .details-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .detail-row {
+            display: flex;
+            padding: 15px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            flex: 0 0 200px;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .detail-value {
+            flex: 1;
+            color: #333;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .activity-list {
+            list-style: none;
+        }
+
+        .activity-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 3px;
+        }
+
+        .activity-time {
+            font-size: 0.85rem;
+            color: #999;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            display: none;
+            font-size: 1rem;
+            animation: slideDown 0.3s ease;
+        }
+
+        .message.success {
+            background: #d1e7dd;
+            color: #0f5132;
+            border: 2px solid #a3cfbb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #842029;
+            border: 2px solid #f1aeb5;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 968px) {
+            .profile-content {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-links {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <div class="header-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="35" height="35" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-bug-icon lucide-bug">
+                        <path d="M12 20v-9" />
+                        <path d="M14 7a4 4 0 0 1 4 4v3a6 6 0 0 1-12 0v-3a4 4 0 0 1 4-4z" />
+                        <path d="M14.12 3.88 16 2" />
+                        <path d="M21 21a4 4 0 0 0-3.81-4" />
+                        <path d="M21 5a4 4 0 0 1-3.55 3.97" />
+                        <path d="M22 13h-4" />
+                        <path d="M3 21a4 4 0 0 1 3.81-4" />
+                        <path d="M3 5a4 4 0 0 0 3.55 3.97" />
+                        <path d="M6 13H2" />
+                        <path d="m8 2 1.88 1.88" />
+                        <path d="M9 7.13V6a3 3 0 1 1 6 0v1.13" />
+                    </svg>
+                    Bugify
+                </div>
+            </div>
+            <ul class="nav-links" id="nav-links"></ul>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <div class="page-header">
+            <h1>My Profile</h1>
+            <p>View and manage your account information</p>
+        </div>
+
+        <div id="message" class="message"></div>
+
+        <div class="profile-content">
+            <div class="profile-card">
+                <div class="profile-avatar" id="profile-avatar">👤</div>
+                <div class="profile-name" id="profile-name">Loading...</div>
+                <span class="profile-role" id="profile-role">...</span>
+                <div class="profile-email" id="profile-email">...</div>
+
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <div class="stat-number" id="stat-reported">0</div>
+                        <div class="stat-label">Bugs Reported</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="stat-assigned">0</div>
+                        <div class="stat-label">Bugs Assigned</div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="openEditModal()">Edit Profile</button>
+                </div>
+            </div>
+
+            <div class="profile-details">
+                <div class="details-section">
+                    <h2 class="section-title">Account Information</h2>
+                    <div class="detail-row">
+                        <div class="detail-label">User ID:</div>
+                        <div class="detail-value" id="detail-userid">...</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Full Name:</div>
+                        <div class="detail-value" id="detail-name">...</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Email Address:</div>
+                        <div class="detail-value" id="detail-email">...</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Role:</div>
+                        <div class="detail-value" id="detail-role">...</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Member Since:</div>
+                        <div class="detail-value" id="detail-joined">...</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Last Login:</div>
+                        <div class="detail-value" id="detail-last-login">...</div>
+                    </div>
+                </div>
+
+                <div class="details-section">
+                    <h2 class="section-title">Recent Activity</h2>
+                    <ul class="activity-list" id="activity-list"></ul>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" onclick="goToDashboard()">Back to Dashboard</button>
+                    <button class="btn btn-primary" onclick="openPasswordModal()">Change Password</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-header">Edit Profile</h2>
+            <form onsubmit="handleEditProfile(event)">
+                <div class="form-group">
+                    <label for="edit-name">Full Name</label>
+                    <input type="text" id="edit-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-email">Email Address</label>
+                    <input type="email" id="edit-email" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-header">Change Password</h2>
+            <form onsubmit="handleChangePassword(event)">
+                <div class="form-group">
+                    <label for="current-password">Current Password</label>
+                    <input type="password" id="current-password" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="new-password">New Password</label>
+                    <input type="password" id="new-password" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="confirm-password">Confirm New Password</label>
+                    <input type="password" id="confirm-password" required minlength="6">
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="closePasswordModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Change Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let allBugs = [];
+        let allUsers = [];
+
+        function checkAuth() {
+            const userStr = localStorage.getItem('bugify_currentUser');
+            if (!userStr) {
+                window.location.href = 'index.html';
+                return false;
+            }
+            currentUser = JSON.parse(userStr);
+            return true;
+        }
+
+        function loadData() {
+            allBugs = JSON.parse(localStorage.getItem('bugify_bugs')) || [];
+            allUsers = JSON.parse(localStorage.getItem('bugify_users')) || [];
+        }
+
+        function init() {
+            if (!checkAuth()) return;
+            loadData();
+            setupNavigation();
+            populateProfile();
+            calculateStats();
+            populateActivity();
+        }
+
+        function setupNavigation() {
+            const navLinks = document.getElementById('nav-links');
+            let links = [];
+
+            if (currentUser.role === 'user') {
+                links = [
+                    { text: 'Dashboard', href: 'Dashboard.html' },
+                    { text: 'Report Bug', href: 'ReportBug.html' },
+                    { text: 'Profile', href: 'Profile.html', active: true },
+                    { text: 'Logout', onclick: 'handleLogout()' }
+                ];
+            } else if (currentUser.role === 'developer') {
+                links = [
+                    { text: 'Dashboard', href: 'Dashboard.html' },
+                    { text: 'Report Bug', href: 'ReportBug.html' },
+                    { text: 'My Bugs', href: 'MyBugs.html' },
+                    { text: 'Profile', href: 'Profile.html', active: true },
+                    { text: 'Logout', onclick: 'handleLogout()' }
+                ];
+            } else if (currentUser.role === 'admin') {
+                links = [
+                    { text: 'Dashboard', href: 'Dashboard.html' },
+                    { text: 'Report Bug', href: 'ReportBug.html' },
+                    { text: 'Manage Bugs', href: 'ManageBugs.html' },
+                    { text: 'Profile', href: 'Profile.html', active: true },
+                    { text: 'Logout', onclick: 'handleLogout()' }
+                ];
+            }
+
+            navLinks.innerHTML = links.map(link =>
+                `<li><a ${link.href ? `href="${link.href}"` : `onclick="${link.onclick}"`} class="${link.active ? 'active' : ''}">${link.text}</a></li>`
+            ).join('');
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('bugify_currentUser');
+            window.location.href = 'Login.html?logout=success';
+        }
+
+        function populateProfile() {
+            const initials = currentUser.name.split(' ').map(n => n[0]).join('');
+            document.getElementById('profile-avatar').textContent = initials;
+            document.getElementById('profile-name').textContent = currentUser.name;
+            document.getElementById('profile-email').textContent = currentUser.email;
+
+            const roleElement = document.getElementById('profile-role');
+            roleElement.textContent = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
+            roleElement.className = `profile-role ${currentUser.role}`;
+
+            document.getElementById('detail-userid').textContent = currentUser.id;
+            document.getElementById('detail-name').textContent = currentUser.name;
+            document.getElementById('detail-email').textContent = currentUser.email;
+            document.getElementById('detail-role').textContent = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
+
+            const joinedDate = new Date(currentUser.joinedDate);
+            document.getElementById('detail-joined').textContent = joinedDate.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            const lastLogin = new Date(currentUser.lastLogin);
+            document.getElementById('detail-last-login').textContent = lastLogin.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function calculateStats() {
+            const bugsReported = allBugs.filter(bug => bug.reported_by === currentUser.id).length;
+            const bugsAssigned = allBugs.filter(bug => bug.assigned_to === currentUser.id).length;
+
+            document.getElementById('stat-reported').textContent = bugsReported;
+            document.getElementById('stat-assigned').textContent = bugsAssigned;
+        }
+
+        function populateActivity() {
+            const userBugs = allBugs.filter(bug =>
+                bug.reported_by === currentUser.id || bug.assigned_to === currentUser.id
+            ).slice(0, 5);
+
+            const activities = userBugs.map(bug => ({
+                icon: bug.status === 'Resolved' ? '✅' : bug.status === 'In Progress' ? '🔄' : '🐛',
+                title: `${bug.status} - ${bug.title}`,
+                time: new Date(bug.updated_at).toLocaleDateString()
+            }));
+
+            const activityList = document.getElementById('activity-list');
+            if (activities.length === 0) {
+                activityList.innerHTML = '<li class="activity-item"><div class="activity-content"><div class="activity-title">No recent activity</div></div></li>';
+            } else {
+                activityList.innerHTML = activities.map(activity => `
+                    <li class="activity-item">
+                        <div class="activity-icon">${activity.icon}</div>
+                        <div class="activity-content">
+                            <div class="activity-title">${activity.title}</div>
+                            <div class="activity-time">${activity.time}</div>
+                        </div>
+                    </li>
+                `).join('');
+            }
+        }
+
+        function openEditModal() {
+            document.getElementById('edit-name').value = currentUser.name;
+            document.getElementById('edit-email').value = currentUser.email;
+            document.getElementById('editModal').classList.add('show');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('show');
+        }
+
+        function handleEditProfile(event) {
+            event.preventDefault();
+
+            const newName = document.getElementById('edit-name').value.trim();
+            const newEmail = document.getElementById('edit-email').value.trim();
+
+            // Check if email is already taken by another user
+            const emailExists = allUsers.find(u => u.email.toLowerCase() === newEmail.toLowerCase() && u.id !== currentUser.id);
+            if (emailExists) {
+                showMessage('Email is already taken by another user!', 'error');
+                return;
+            }
+
+            // Update user in users array
+            const userIndex = allUsers.findIndex(u => u.id === currentUser.id);
+            if (userIndex !== -1) {
+                allUsers[userIndex].name = newName;
+                allUsers[userIndex].email = newEmail;
+                localStorage.setItem('bugify_users', JSON.stringify(allUsers));
+            }
+
+            // Update current user
+            currentUser.name = newName;
+            currentUser.email = newEmail;
+            localStorage.setItem('bugify_currentUser', JSON.stringify(currentUser));
+
+            closeEditModal();
+            showMessage('Profile updated successfully!', 'success');
+            populateProfile();
+        }
+
+        function openPasswordModal() {
+            document.getElementById('passwordModal').classList.add('show');
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').classList.remove('show');
+            document.getElementById('current-password').value = '';
+            document.getElementById('new-password').value = '';
+            document.getElementById('confirm-password').value = '';
+        }
+
+        function handleChangePassword(event) {
+            event.preventDefault();
+
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            // Find user in users array
+            const user = allUsers.find(u => u.id === currentUser.id);
+
+            if (!user || user.password !== currentPassword) {
+                showMessage('Current password is incorrect!', 'error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showMessage('New passwords do not match!', 'error');
+                return;
+            }
+
+            if (newPassword === currentPassword) {
+                showMessage('New password must be different from current password!', 'error');
+                return;
+            }
+
+            // Update password
+            const userIndex = allUsers.findIndex(u => u.id === currentUser.id);
+            if (userIndex !== -1) {
+                allUsers[userIndex].password = newPassword;
+                localStorage.setItem('bugify_users', JSON.stringify(allUsers));
+            }
+
+            closePasswordModal();
+            showMessage('Password changed successfully!', 'success');
+        }
+
+        function goToDashboard() {
+            window.location.href = 'dashboard.html';
+        }
+
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message ${type} show`;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setTimeout(() => messageEl.classList.remove('show'), 3000);
+        }
+
+        init();
+    </script>
+</body>
+
+</html>
