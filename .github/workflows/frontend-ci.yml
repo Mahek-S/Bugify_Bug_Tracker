@@ -1,0 +1,35 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [ main, dev, feature/* ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+
+    - name: Install frontend deps
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Run ESLint
+      run: |
+        cd frontend
+        npm run lint
+
+    - name: Run JS unit tests
+      run: |
+        cd frontend
+        npm run test:unit

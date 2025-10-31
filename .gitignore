@@ -1,0 +1,21 @@
+# Node dependencies
+node_modules/
+npm-debug.log
+
+# Python environment (for backend later)
+__pycache__/
+*.pyc
+.venv/
+env/
+venv/
+
+# Environment files
+.env
+
+# IDE / OS files
+.vscode/
+.DS_Store
+
+# Build / temp files
+dist/
+build/
