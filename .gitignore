@@ -1,21 +1,39 @@
-# Node dependencies
-node_modules/
-npm-debug.log
+frontend/node_modules/
+backend/venv/
 
-# Python environment (for backend later)
+
+# --- Python / FastAPI backend ---
 __pycache__/
 *.pyc
-.venv/
-env/
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+
+# --- Virtual environment ---
 venv/
+env/
 
-# Environment files
+# --- Environment variables ---
 .env
+.env.*
 
-# IDE / OS files
+# --- Test and cache files ---
+pytest_cache/
+.tox/
+.mypy_cache/
+.coverage
+htmlcov/
+.cache/
+
+# --- VSCode and IDE settings ---
 .vscode/
-.DS_Store
+.idea/
 
-# Build / temp files
-dist/
-build/
+# --- OS-specific junk ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Logs ---
+*.log
