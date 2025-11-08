@@ -9,14 +9,17 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
     defaults:
       run:
-        working-directory: ./backend   # 👈 important: run inside backend folder
+        working-directory: ./backend
+
     services:
       mongo:
         image: mongo:6
         ports:
           - 27017:27017
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,7 +27,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
@@ -34,6 +37,9 @@ jobs:
 
       - name: Run tests
         env:
-          MONGODB_URL: mongodb://localhost:27017
-          DATABASE_NAME: bugify_test
+          MONGODB_URL: ${{ secrets.MONGODB_URL }}
+          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          ALGORITHM: ${{ secrets.ALGORITHM }}
+          ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}
         run: pytest -v --maxfail=1 --disable-warnings
