@@ -68,3 +68,58 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     email: Optional[str] = None
+
+class ProjectResponse(BaseModel):
+    id: int
+    name: str
+    created_by: str
+    created_at: str
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "id": 1,
+                "name": "Bugify Dashboard",
+                "created_by": "admin1",
+                "created_at": "2025-09-01"
+            }
+        }
+    }
+
+class BugResponse(BaseModel):
+    id: int
+    project_id: int
+    project_name: str
+    title: str
+    description: str
+    status: Literal["Open", "In Progress", "Resolved", "Closed"]
+    priority: Literal["High", "Medium", "Low"]
+    reported_by: str
+    assigned_to: Optional[str] = None
+    created_at: str
+    updated_at: str
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "id": 1,
+                "project_id": 1,
+                "project_name": "Bugify Dashboard",
+                "title": "Login button not working",
+                "description": "Login button doesn't respond",
+                "status": "Open",
+                "priority": "High",
+                "reported_by": "user1",
+                "assigned_to": "dev1",
+                "created_at": "2025-10-07T10:00:00Z",
+                "updated_at": "2025-10-07T10:00:00Z"
+            }
+        }
+    }
+
+class DashboardStats(BaseModel):
+    total: int
+    open: int
+    in_progress: int
+    resolved: int
+    closed: int

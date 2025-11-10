@@ -461,7 +461,10 @@
     </div>
 
     <script>
+        const API_BASE_URL = 'http://localhost:8000';
+
         let currentUser = null;
+        let authToken = null;
         let allBugs = [];
         let allProjects = [];
         let allUsers = [];
@@ -472,28 +475,83 @@
         // Check authentication
         function checkAuth() {
             const userStr = localStorage.getItem('bugify_currentUser');
-            if (!userStr) {
+            authToken = localStorage.getItem('bugify_token');
+
+            if (!userStr || !authToken) {
                 window.location.href = 'index.html';
                 return false;
             }
+
             currentUser = JSON.parse(userStr);
             return true;
         }
 
-        // Load data from localStorage
-        function loadData() {
-            allBugs = JSON.parse(localStorage.getItem('bugify_bugs')) || [];
-            allProjects = JSON.parse(localStorage.getItem('bugify_projects')) || [];
-            allUsers = JSON.parse(localStorage.getItem('bugify_users')) || [];
-            filteredBugs = [...allBugs];
+        // Fetch data from API
+        async function loadDataFromAPI() {
+            try {
+                // Fetch users
+                const usersResponse = await fetch(`${API_BASE_URL}/dashboard/users`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (!usersResponse.ok) {
+                    if (usersResponse.status === 401) {
+                        // Token expired, redirect to login
+                        localStorage.removeItem('bugify_currentUser');
+                        localStorage.removeItem('bugify_token');
+                        window.location.href = 'index.html';
+                        return false;
+                    }
+                    throw new Error('Failed to fetch users');
+                }
+
+                allUsers = await usersResponse.json();
+
+                // Fetch projects
+                const projectsResponse = await fetch(`${API_BASE_URL}/dashboard/projects`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (!projectsResponse.ok) throw new Error('Failed to fetch projects');
+                allProjects = await projectsResponse.json();
+
+                // Fetch bugs
+                const bugsResponse = await fetch(`${API_BASE_URL}/dashboard/bugs`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (!bugsResponse.ok) throw new Error('Failed to fetch bugs');
+                allBugs = await bugsResponse.json();
+
+                filteredBugs = [...allBugs];
+                return true;
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                alert('Failed to load dashboard data. Please try again.');
+                return false;
+            }
         }
 
         // Initialize dashboard
-        function init() {
+        async function init() {
             if (!checkAuth()) return;
-            loadData();
+
             setupWelcomeBanner();
             setupNavigation();
+
+            // Show loading state
+            document.getElementById('bugs-tbody').innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px;">Loading...</td></tr>';
+
+            const loaded = await loadDataFromAPI();
+            if (!loaded) return;
+
             populateProjectSelector();
             renderBugs();
         }
@@ -515,7 +573,7 @@
                     { text: 'Dashboard', href: 'Dashboard.html', active: true },
                     { text: 'Report Bug', href: 'ReportBug.html' },
                     { text: 'Profile', href: 'Profile.html' },
-                    { text: 'Logout', href: 'Login.html', onclick: 'logout()' }
+                    { text: 'Logout', href: '#', onclick: 'logout()' }
                 ];
             } else if (currentUser.role === 'developer') {
                 links = [
@@ -523,7 +581,7 @@
                     { text: 'Report Bug', href: 'ReportBug.html' },
                     { text: 'My Bugs', href: 'MyBugs.html' },
                     { text: 'Profile', href: 'Profile.html' },
-                    { text: 'Logout', href: 'Login.html', onclick: 'logout()' }
+                    { text: 'Logout', href: '#', onclick: 'logout()' }
                 ];
             } else if (currentUser.role === 'admin') {
                 links = [
@@ -531,7 +589,7 @@
                     { text: 'Report Bug', href: 'ReportBug.html' },
                     { text: 'Manage Bugs', href: 'ManageBugs.html' },
                     { text: 'Profile', href: 'Profile.html' },
-                    { text: 'Logout', href: 'Login.html', onclick: 'logout()' }
+                    { text: 'Logout', href: '#', onclick: 'logout()' }
                 ];
             }
 
@@ -543,6 +601,7 @@
         // Logout function
         function logout() {
             localStorage.removeItem('bugify_currentUser');
+            localStorage.removeItem('bugify_token');
             window.location.href = 'Login.html?logout=success';
         }
 
@@ -559,57 +618,54 @@
             });
         }
 
-        // Update statistics
-        function updateStats() {
-            // Stats removed as per user request
-        }
-
-        // Get visible bugs based on user role
-        function getVisibleBugs() {
-            if (currentUser.role === 'admin') {
-                return allBugs;
-            } else if (currentUser.role === 'developer') {
-                return allBugs;
-            } else {
-                return allBugs.filter(bug => bug.reported_by === currentUser.id);
-            }
-        }
-
         // Filter by project
-        function filterByProject() {
+        async function filterByProject() {
             const select = document.getElementById('project-select');
             currentProject = select.value;
-            applyFilters();
+            await applyFilters();
         }
 
         // Filter by status
-        function filterByStatus(status) {
+        async function filterByStatus(status) {
             currentFilter = status;
 
             const buttons = document.querySelectorAll('.filter-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
 
-            applyFilters();
+            await applyFilters();
         }
 
         // Apply all filters
-        function applyFilters() {
-            const visibleBugs = getVisibleBugs();
+        async function applyFilters() {
+            try {
+                // Build query parameters
+                const params = new URLSearchParams();
 
-            filteredBugs = visibleBugs.filter(bug => {
-                if (currentProject !== 'all' && bug.project_id !== parseInt(currentProject)) {
-                    return false;
+                if (currentProject !== 'all') {
+                    params.append('project_id', currentProject);
                 }
 
-                if (currentFilter !== 'all' && bug.status !== currentFilter) {
-                    return false;
+                if (currentFilter !== 'all') {
+                    params.append('status', currentFilter);
                 }
 
-                return true;
-            });
+                // Fetch filtered bugs from API
+                const response = await fetch(`${API_BASE_URL}/dashboard/bugs?${params.toString()}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
 
-            renderBugs();
+                if (!response.ok) throw new Error('Failed to fetch filtered bugs');
+
+                filteredBugs = await response.json();
+                renderBugs();
+
+            } catch (error) {
+                console.error('Error applying filters:', error);
+                alert('Failed to filter bugs. Please try again.');
+            }
         }
 
         // Get user name by ID
@@ -635,42 +691,31 @@
             noBugs.style.display = 'none';
 
             tbody.innerHTML = filteredBugs.map(bug => `
-                <tr>
-                    <td>#${bug.id}</td>
-                    <td>
-                        <div class="bug-title">${bug.title}</div>
-                        <div class="bug-description" title="${bug.description}">${bug.description}</div>
-                    </td>
-                    <td>${bug.project_name}</td>
-                    <td>
-                        <span class="status-badge ${bug.status.toLowerCase().replace(' ', '-')}">${bug.status}</span>
-                    </td>
-                    <td>
-                        <span class="priority-badge ${bug.priority.toLowerCase()}">${bug.priority}</span>
-                    </td>
-                    <td>${getUserName(bug.reported_by)}</td>
-                    <td>${bug.assigned_to ? getUserName(bug.assigned_to) : 'Unassigned'}</td>
-                </tr>
-            `).join('');
+            <tr>
+                <td>#${bug.id}</td>
+                <td>
+                    <div class="bug-title">${bug.title}</div>
+                    <div class="bug-description" title="${bug.description}">${bug.description}</div>
+                </td>
+                <td>${bug.project_name}</td>
+                <td>
+                    <span class="status-badge ${bug.status.toLowerCase().replace(' ', '-')}">${bug.status}</span>
+                </td>
+                <td>
+                    <span class="priority-badge ${bug.priority.toLowerCase()}">${bug.priority}</span>
+                </td>
+                <td>${getUserName(bug.reported_by)}</td>
+                <td>${bug.assigned_to ? getUserName(bug.assigned_to) : 'Unassigned'}</td>
+            </tr>
+        `).join('');
         }
 
-        // Listen for localStorage changes from other tabs/pages
-        window.addEventListener('storage', function (e) {
-            if (e.key === 'bugify_bugs' || e.key === 'bugify_projects' || e.key === 'bugify_users') {
-                loadData();
-                populateProjectSelector();
-                applyFilters();
-            }
-        });
-
-        // Reload data when page becomes visible (for same-tab updates)
-        document.addEventListener('visibilitychange', function () {
-            if (!document.hidden) {
-                loadData();
-                populateProjectSelector();
-                applyFilters();
-            }
-        });
+        // Auto-refresh data every 30 seconds
+        setInterval(async () => {
+            if (document.hidden) return; // Don't refresh if tab is not visible
+            await loadDataFromAPI();
+            await applyFilters();
+        }, 30000);
 
         // Initialize on load
         init();
