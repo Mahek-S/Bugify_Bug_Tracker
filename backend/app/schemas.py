@@ -123,3 +123,35 @@ class DashboardStats(BaseModel):
     in_progress: int
     resolved: int
     closed: int
+
+class BugCreate(BaseModel):
+    project_id: int
+    title: str = Field(..., min_length=3, max_length=100)
+    description: str = Field(..., min_length=10, max_length=1000)
+    priority: Literal["High", "Medium", "Low"] = "Medium"
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "project_id": 1,
+                "title": "Login button not working",
+                "description": "The login button does not respond when clicked on mobile devices",
+                "priority": "High"
+            }
+        }
+    }
+
+class BugUpdate(BaseModel):
+    status: Optional[Literal["Open", "In Progress", "Resolved", "Closed"]] = None
+    assigned_to: Optional[str] = None
+    priority: Optional[Literal["High", "Medium", "Low"]] = None
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "status": "In Progress",
+                "assigned_to": "dev1",
+                "priority": "High"
+            }
+        }
+    }
