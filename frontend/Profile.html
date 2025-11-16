@@ -586,34 +586,101 @@
     </div>
 
     <script>
-        let currentUser = null;
-        let allBugs = [];
-        let allUsers = [];
+        const API_BASE_URL = 'http://localhost:8000';
 
+        let currentUser = null;
+        let authToken = null;
+
+        // Check authentication
         function checkAuth() {
             const userStr = localStorage.getItem('bugify_currentUser');
-            if (!userStr) {
-                window.location.href = 'index.html';
+            authToken = localStorage.getItem('bugify_token');
+
+            if (!userStr || !authToken) {
+                window.location.href = 'login.html';
                 return false;
             }
+
             currentUser = JSON.parse(userStr);
             return true;
         }
 
-        function loadData() {
-            allBugs = JSON.parse(localStorage.getItem('bugify_bugs')) || [];
-            allUsers = JSON.parse(localStorage.getItem('bugify_users')) || [];
+        // Load profile data from API
+        async function loadProfileData() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/profile/me`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        localStorage.removeItem('bugify_currentUser');
+                        localStorage.removeItem('bugify_token');
+                        window.location.href = 'login.html';
+                        return null;
+                    }
+                    throw new Error('Failed to fetch profile');
+                }
+
+                return await response.json();
+
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                showMessage('Failed to load profile data', 'error');
+                return null;
+            }
         }
 
-        function init() {
+        // Load profile statistics
+        async function loadProfileStats() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/profile/me/stats`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch stats');
+
+                const stats = await response.json();
+                document.getElementById('stat-reported').textContent = stats.bugs_reported;
+                document.getElementById('stat-assigned').textContent = stats.bugs_assigned;
+
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Load recent activity
+        async function loadRecentActivity() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/profile/me/activity?limit=5`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch activity');
+
+                const activities = await response.json();
+                populateActivity(activities);
+
+            } catch (error) {
+                console.error('Error loading activity:', error);
+            }
+        }
+
+        // Initialize page
+        async function init() {
             if (!checkAuth()) return;
-            loadData();
+
             setupNavigation();
-            populateProfile();
-            calculateStats();
-            populateActivity();
+
+            const profile = await loadProfileData();
+            if (!profile) return;
+
+            populateProfile(profile);
+            await loadProfileStats();
+            await loadRecentActivity();
         }
 
+        // Setup navigation
         function setupNavigation() {
             const navLinks = document.getElementById('nav-links');
             let links = [];
@@ -623,7 +690,7 @@
                     { text: 'Dashboard', href: 'Dashboard.html' },
                     { text: 'Report Bug', href: 'ReportBug.html' },
                     { text: 'Profile', href: 'Profile.html', active: true },
-                    { text: 'Logout', onclick: 'handleLogout()' }
+                    { text: 'Logout', href: '#', onclick: 'handleLogout()' }
                 ];
             } else if (currentUser.role === 'developer') {
                 links = [
@@ -631,7 +698,7 @@
                     { text: 'Report Bug', href: 'ReportBug.html' },
                     { text: 'My Bugs', href: 'MyBugs.html' },
                     { text: 'Profile', href: 'Profile.html', active: true },
-                    { text: 'Logout', onclick: 'handleLogout()' }
+                    { text: 'Logout', href: '#', onclick: 'handleLogout()' }
                 ];
             } else if (currentUser.role === 'admin') {
                 links = [
@@ -639,132 +706,182 @@
                     { text: 'Report Bug', href: 'ReportBug.html' },
                     { text: 'Manage Bugs', href: 'ManageBugs.html' },
                     { text: 'Profile', href: 'Profile.html', active: true },
-                    { text: 'Logout', onclick: 'handleLogout()' }
+                    { text: 'Logout', href: '#', onclick: 'handleLogout()' }
                 ];
             }
 
             navLinks.innerHTML = links.map(link =>
-                `<li><a ${link.href ? `href="${link.href}"` : `onclick="${link.onclick}"`} class="${link.active ? 'active' : ''}">${link.text}</a></li>`
+                `<li><a ${link.href && link.href !== '#' ? `href="${link.href}"` : `href="#" onclick="${link.onclick}; return false;"`} class="${link.active ? 'active' : ''}">${link.text}</a></li>`
             ).join('');
         }
 
+        // Logout function
         function handleLogout() {
             localStorage.removeItem('bugify_currentUser');
-            window.location.href = 'Login.html?logout=success';
+            localStorage.removeItem('bugify_token');
+            window.location.href = 'login.html?logout=success';
         }
 
-        function populateProfile() {
-            const initials = currentUser.name.split(' ').map(n => n[0]).join('');
+        // Populate profile information
+        function populateProfile(profile) {
+            // Update avatar with initials
+            const initials = profile.name.split(' ').map(n => n[0]).join('');
             document.getElementById('profile-avatar').textContent = initials;
-            document.getElementById('profile-name').textContent = currentUser.name;
-            document.getElementById('profile-email').textContent = currentUser.email;
+
+            // Update profile card
+            document.getElementById('profile-name').textContent = profile.name;
+            document.getElementById('profile-email').textContent = profile.email;
 
             const roleElement = document.getElementById('profile-role');
-            roleElement.textContent = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
-            roleElement.className = `profile-role ${currentUser.role}`;
+            roleElement.textContent = profile.role.charAt(0).toUpperCase() + profile.role.slice(1);
+            roleElement.className = `profile-role ${profile.role}`;
 
-            document.getElementById('detail-userid').textContent = currentUser.id;
-            document.getElementById('detail-name').textContent = currentUser.name;
-            document.getElementById('detail-email').textContent = currentUser.email;
-            document.getElementById('detail-role').textContent = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
+            // Update profile details
+            document.getElementById('detail-userid').textContent = profile.id;
+            document.getElementById('detail-name').textContent = profile.name;
+            document.getElementById('detail-email').textContent = profile.email;
+            document.getElementById('detail-role').textContent = profile.role.charAt(0).toUpperCase() + profile.role.slice(1);
 
-            const joinedDate = new Date(currentUser.joinedDate);
+            // Format joined date
+            const joinedDate = new Date(profile.joined_date);
             document.getElementById('detail-joined').textContent = joinedDate.toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
             });
 
-            const lastLogin = new Date(currentUser.lastLogin);
-            document.getElementById('detail-last-login').textContent = lastLogin.toLocaleDateString('en-US', {
+            // Set last login to current time
+            document.getElementById('detail-last-login').textContent = new Date().toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'
             });
+
+            // Update current user in localStorage
+            currentUser = { ...currentUser, ...profile };
+            localStorage.setItem('bugify_currentUser', JSON.stringify(currentUser));
         }
 
-        function calculateStats() {
-            const bugsReported = allBugs.filter(bug => bug.reported_by === currentUser.id).length;
-            const bugsAssigned = allBugs.filter(bug => bug.assigned_to === currentUser.id).length;
-
-            document.getElementById('stat-reported').textContent = bugsReported;
-            document.getElementById('stat-assigned').textContent = bugsAssigned;
-        }
-
-        function populateActivity() {
-            const userBugs = allBugs.filter(bug =>
-                bug.reported_by === currentUser.id || bug.assigned_to === currentUser.id
-            ).slice(0, 5);
-
-            const activities = userBugs.map(bug => ({
-                icon: bug.status === 'Resolved' ? '✅' : bug.status === 'In Progress' ? '🔄' : '🐛',
-                title: `${bug.status} - ${bug.title}`,
-                time: new Date(bug.updated_at).toLocaleDateString()
-            }));
-
+        // Populate activity
+        function populateActivity(activities) {
             const activityList = document.getElementById('activity-list');
+
             if (activities.length === 0) {
-                activityList.innerHTML = '<li class="activity-item"><div class="activity-content"><div class="activity-title">No recent activity</div></div></li>';
-            } else {
-                activityList.innerHTML = activities.map(activity => `
-                    <li class="activity-item">
-                        <div class="activity-icon">${activity.icon}</div>
-                        <div class="activity-content">
-                            <div class="activity-title">${activity.title}</div>
-                            <div class="activity-time">${activity.time}</div>
-                        </div>
-                    </li>
-                `).join('');
+                activityList.innerHTML = `
+                <li class="activity-item">
+                    <div class="activity-content">
+                        <div class="activity-title">No recent activity</div>
+                    </div>
+                </li>
+            `;
+                return;
             }
+
+            activityList.innerHTML = activities.map(activity => {
+                const icon = activity.status === 'Resolved' ? '✅' :
+                    activity.status === 'In Progress' ? '🔄' : '🐛';
+
+                const activityText = activity.activity_type === 'reported' ?
+                    `Reported: ${activity.title}` :
+                    `Assigned: ${activity.title}`;
+
+                const time = new Date(activity.updated_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+
+                return `
+                <li class="activity-item">
+                    <div class="activity-icon">${icon}</div>
+                    <div class="activity-content">
+                        <div class="activity-title">${activity.status} - ${activityText}</div>
+                        <div class="activity-time">${time}</div>
+                    </div>
+                </li>
+            `;
+            }).join('');
         }
 
+        // Open edit profile modal
         function openEditModal() {
             document.getElementById('edit-name').value = currentUser.name;
             document.getElementById('edit-email').value = currentUser.email;
             document.getElementById('editModal').classList.add('show');
         }
 
+        // Close edit profile modal
         function closeEditModal() {
             document.getElementById('editModal').classList.remove('show');
         }
 
-        function handleEditProfile(event) {
+        // Handle edit profile submission
+        async function handleEditProfile(event) {
             event.preventDefault();
 
             const newName = document.getElementById('edit-name').value.trim();
             const newEmail = document.getElementById('edit-email').value.trim();
 
-            // Check if email is already taken by another user
-            const emailExists = allUsers.find(u => u.email.toLowerCase() === newEmail.toLowerCase() && u.id !== currentUser.id);
-            if (emailExists) {
-                showMessage('Email is already taken by another user!', 'error');
+            // Check if anything changed
+            if (newName === currentUser.name && newEmail === currentUser.email) {
+                showMessage('No changes to update', 'error');
                 return;
             }
 
-            // Update user in users array
-            const userIndex = allUsers.findIndex(u => u.id === currentUser.id);
-            if (userIndex !== -1) {
-                allUsers[userIndex].name = newName;
-                allUsers[userIndex].email = newEmail;
-                localStorage.setItem('bugify_users', JSON.stringify(allUsers));
+            // Disable submit button
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Updating...';
+
+            try {
+                const updateData = {};
+                if (newName !== currentUser.name) updateData.name = newName;
+                if (newEmail !== currentUser.email) updateData.email = newEmail;
+
+                const response = await fetch(`${API_BASE_URL}/profile/me`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(updateData)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showMessage(data.detail || 'Failed to update profile', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                    return;
+                }
+
+                closeEditModal();
+                showMessage('Profile updated successfully!', 'success');
+
+                // Reload profile data
+                const profile = await loadProfileData();
+                if (profile) {
+                    populateProfile(profile);
+                }
+
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                showMessage('Network error. Please check your connection and try again.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
             }
-
-            // Update current user
-            currentUser.name = newName;
-            currentUser.email = newEmail;
-            localStorage.setItem('bugify_currentUser', JSON.stringify(currentUser));
-
-            closeEditModal();
-            showMessage('Profile updated successfully!', 'success');
-            populateProfile();
         }
 
+        // Open password modal
         function openPasswordModal() {
             document.getElementById('passwordModal').classList.add('show');
         }
 
+        // Close password modal
         function closePasswordModal() {
             document.getElementById('passwordModal').classList.remove('show');
             document.getElementById('current-password').value = '';
@@ -772,21 +889,15 @@
             document.getElementById('confirm-password').value = '';
         }
 
-        function handleChangePassword(event) {
+        // Handle change password submission
+        async function handleChangePassword(event) {
             event.preventDefault();
 
             const currentPassword = document.getElementById('current-password').value;
             const newPassword = document.getElementById('new-password').value;
             const confirmPassword = document.getElementById('confirm-password').value;
 
-            // Find user in users array
-            const user = allUsers.find(u => u.id === currentUser.id);
-
-            if (!user || user.password !== currentPassword) {
-                showMessage('Current password is incorrect!', 'error');
-                return;
-            }
-
+            // Client-side validation
             if (newPassword !== confirmPassword) {
                 showMessage('New passwords do not match!', 'error');
                 return;
@@ -797,29 +908,66 @@
                 return;
             }
 
-            // Update password
-            const userIndex = allUsers.findIndex(u => u.id === currentUser.id);
-            if (userIndex !== -1) {
-                allUsers[userIndex].password = newPassword;
-                localStorage.setItem('bugify_users', JSON.stringify(allUsers));
+            // Disable submit button
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Changing...';
+
+            try {
+                const passwordData = {
+                    current_password: currentPassword,
+                    new_password: newPassword,
+                    confirm_password: confirmPassword
+                };
+
+                const response = await fetch(`${API_BASE_URL}/profile/me/password`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(passwordData)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showMessage(data.detail || 'Failed to change password', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                    return;
+                }
+
+                closePasswordModal();
+                showMessage('Password changed successfully!', 'success');
+
+            } catch (error) {
+                console.error('Error changing password:', error);
+                showMessage('Network error. Please check your connection and try again.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
             }
-
-            closePasswordModal();
-            showMessage('Password changed successfully!', 'success');
         }
 
+        // Go to dashboard
         function goToDashboard() {
-            window.location.href = 'dashboard.html';
+            window.location.href = 'Dashboard.html';
         }
 
+        // Show message
         function showMessage(text, type) {
             const messageEl = document.getElementById('message');
             messageEl.textContent = text;
             messageEl.className = `message ${type} show`;
             window.scrollTo({ top: 0, behavior: 'smooth' });
-            setTimeout(() => messageEl.classList.remove('show'), 3000);
+
+            setTimeout(() => {
+                messageEl.classList.remove('show');
+            }, 3000);
         }
 
+        // Initialize on load
         init();
     </script>
 </body>

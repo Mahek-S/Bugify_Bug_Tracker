@@ -155,3 +155,124 @@ class BugUpdate(BaseModel):
             }
         }
     }
+
+class ProjectCreate(BaseModel):
+    name: str = Field(..., min_length=3, max_length=100)
+    description: Optional[str] = Field(None, max_length=500)
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "name": "Bugify Mobile App",
+                "description": "iOS and Android mobile application"
+            }
+        }
+    }
+
+class ProjectResponse(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    created_by: str
+    created_at: str
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "id": 1,
+                "name": "Bugify Dashboard",
+                "description": "Main dashboard project",
+                "created_by": "admin1",
+                "created_at": "2025-09-01"
+            }
+        }
+    }
+
+class BugAssignment(BaseModel):
+    assigned_to: Optional[str] = None
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "assigned_to": "dev1"
+            }
+        }
+    }
+
+class BugStatusUpdate(BaseModel):
+    status: Literal["Open", "In Progress", "Resolved", "Closed"]
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "status": "In Progress"
+            }
+        }
+    }
+
+class ProfileUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=2, max_length=100)
+    email: Optional[EmailStr] = None
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "name": "John Doe",
+                "email": "john.doe@bugify.com"
+            }
+        }
+    }
+
+class ProfileResponse(BaseModel):
+    id: str
+    name: str
+    email: EmailStr
+    role: str
+    joined_date: str
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "id": "dev1",
+                "name": "John Developer",
+                "email": "dev1@bugify.com",
+                "role": "developer",
+                "joined_date": "2025-09-10"
+            }
+        }
+    }
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(..., min_length=6)
+    new_password: str = Field(..., min_length=6)
+    confirm_password: str = Field(..., min_length=6)
+    
+    @field_validator('confirm_password')
+    @classmethod
+    def passwords_match(cls, v, info):
+        if 'new_password' in info.data and v != info.data['new_password']:
+            raise ValueError('Passwords do not match')
+        return v
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "current_password": "oldpass123",
+                "new_password": "newpass123",
+                "confirm_password": "newpass123"
+            }
+        }
+    }
+
+class ProfileStats(BaseModel):
+    bugs_reported: int
+    bugs_assigned: int
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "bugs_reported": 5,
+                "bugs_assigned": 8
+            }
+        }
+    }
