@@ -21,6 +21,9 @@ async def connect_to_mongo():
     mongodb_url = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
     db.client = AsyncIOMotorClient(mongodb_url)
     print("✓ Connected to MongoDB")
+    print(">>> ENV =", os.getenv("ENV"))
+    print(">>> DATABASE_NAME =", os.getenv("DATABASE_NAME"))
+
 
 async def close_mongo_connection():
     """Close MongoDB connection"""

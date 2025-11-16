@@ -619,7 +619,11 @@
     </div>
 
     <script>
+
+        const API_BASE_URL = 'http://localhost:8000';
+
         let currentUser = null;
+        let authToken = null;
         let allBugs = [];
         let allProjects = [];
         let allUsers = [];
@@ -628,39 +632,90 @@
         let currentProject = 'all';
         let filteredBugs = [];
 
+        // Check authentication
         function checkAuth() {
             const userStr = localStorage.getItem('bugify_currentUser');
-            if (!userStr) {
-                window.location.href = 'index.html';
+            authToken = localStorage.getItem('bugify_token');
+
+            if (!userStr || !authToken) {
+                window.location.href = 'login.html';
                 return false;
             }
+
             currentUser = JSON.parse(userStr);
 
             if (currentUser.role !== 'admin') {
                 alert('Access denied. Only admins can manage bugs.');
-                window.location.href = 'dashboard.html';
+                window.location.href = 'Dashboard.html';
                 return false;
             }
 
             return true;
         }
 
-        function loadData() {
-            allBugs = JSON.parse(localStorage.getItem('bugify_bugs')) || [];
-            allProjects = JSON.parse(localStorage.getItem('bugify_projects')) || [];
-            allUsers = JSON.parse(localStorage.getItem('bugify_users')) || [];
-            developers = allUsers.filter(u => u.role === 'developer');
-            filteredBugs = [...allBugs];
+        // Load data from API
+        async function loadDataFromAPI() {
+            try {
+                // Fetch users
+                const usersResponse = await fetch(`${API_BASE_URL}/dashboard/users`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!usersResponse.ok) {
+                    if (usersResponse.status === 401) {
+                        localStorage.removeItem('bugify_currentUser');
+                        localStorage.removeItem('bugify_token');
+                        window.location.href = 'login.html';
+                        return false;
+                    }
+                    throw new Error('Failed to fetch users');
+                }
+                allUsers = await usersResponse.json();
+
+                // Fetch developers
+                const devsResponse = await fetch(`${API_BASE_URL}/manage/developers`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!devsResponse.ok) throw new Error('Failed to fetch developers');
+                developers = await devsResponse.json();
+
+                // Fetch projects
+                const projectsResponse = await fetch(`${API_BASE_URL}/dashboard/projects`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!projectsResponse.ok) throw new Error('Failed to fetch projects');
+                allProjects = await projectsResponse.json();
+
+                // Fetch bugs for management
+                const bugsResponse = await fetch(`${API_BASE_URL}/manage/bugs`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!bugsResponse.ok) throw new Error('Failed to fetch bugs');
+                allBugs = await bugsResponse.json();
+
+                filteredBugs = [...allBugs];
+                return true;
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showMessage('Failed to load data. Please try again.', 'error');
+                return false;
+            }
         }
 
-        function init() {
+        // Initialize
+        async function init() {
             if (!checkAuth()) return;
-            loadData();
+
             setupNavigation();
+
+            const loaded = await loadDataFromAPI();
+            if (!loaded) return;
+
             populateProjectSelector();
             renderBugs();
         }
 
+        // Setup navigation
         function setupNavigation() {
             const navLinks = document.getElementById('nav-links');
             let links = [
@@ -668,7 +723,7 @@
                 { text: 'Report Bug', href: 'ReportBug.html' },
                 { text: 'Manage Bugs', href: 'ManageBugs.html', active: true },
                 { text: 'Profile', href: 'Profile.html' },
-                { text: 'Logout', href: 'Login.html', onclick: 'logout()' }
+                { text: 'Logout', href: '#', onclick: 'logout()' }
             ];
 
             navLinks.innerHTML = links.map(link =>
@@ -676,11 +731,14 @@
             ).join('');
         }
 
+        // Logout
         function logout() {
             localStorage.removeItem('bugify_currentUser');
-            window.location.href = 'index.html?logout=success';
+            localStorage.removeItem('bugify_token');
+            window.location.href = 'login.html?logout=success';
         }
 
+        // Populate project selector
         function populateProjectSelector() {
             const select = document.getElementById('project-select');
             select.innerHTML = '<option value="all">All Projects</option>';
@@ -693,47 +751,70 @@
             });
         }
 
-        function filterByProject() {
+        // Filter by project
+        async function filterByProject() {
             const select = document.getElementById('project-select');
             currentProject = select.value;
-            applyFilters();
+            await applyFilters();
         }
 
-        function filterByStatus(status) {
+        // Filter by status
+        async function filterByStatus(status) {
             currentFilter = status;
 
             const buttons = document.querySelectorAll('.filter-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
 
-            applyFilters();
+            await applyFilters();
         }
 
-        function applyFilters() {
-            filteredBugs = allBugs.filter(bug => {
-                if (currentProject !== 'all' && bug.project_id !== parseInt(currentProject)) {
-                    return false;
+        // Apply filters
+        async function applyFilters() {
+            try {
+                const params = new URLSearchParams();
+                if (currentProject !== 'all') {
+                    params.append('project_id', currentProject);
+                }
+                if (currentFilter !== 'all') {
+                    params.append('status_filter', currentFilter);
                 }
 
-                if (currentFilter !== 'all' && bug.status !== currentFilter) {
-                    return false;
-                }
+                const response = await fetch(`${API_BASE_URL}/manage/bugs?${params.toString()}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
 
-                return true;
-            });
+                if (!response.ok) throw new Error('Failed to fetch filtered bugs');
 
-            renderBugs();
+                filteredBugs = await response.json();
+                renderBugs();
+
+            } catch (error) {
+                console.error('Error applying filters:', error);
+                showMessage('Failed to filter bugs', 'error');
+            }
         }
 
-        function assignBug(bugId, developerId) {
-            const bugIndex = allBugs.findIndex(b => b.id === bugId);
-            if (bugIndex !== -1) {
-                const assignedDevId = developerId === 'unassigned' ? null : developerId;
-                allBugs[bugIndex].assigned_to = assignedDevId;
-                allBugs[bugIndex].assigned_by = currentUser.id;
-                allBugs[bugIndex].updated_at = new Date().toISOString();
+        // Assign bug to developer
+        async function assignBug(bugId, developerId) {
+            try {
+                const assignmentData = {
+                    assigned_to: developerId === 'unassigned' ? null : developerId
+                };
 
-                localStorage.setItem('bugify_bugs', JSON.stringify(allBugs));
+                const response = await fetch(`${API_BASE_URL}/manage/bugs/${bugId}/assign`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(assignmentData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail);
+                }
 
                 const devName = developerId === 'unassigned'
                     ? 'Unassigned'
@@ -741,42 +822,64 @@
 
                 showMessage(`Bug #${bugId} assigned to ${devName} successfully!`);
 
-                loadData();
-                applyFilters();
+                await loadDataFromAPI();
+                await applyFilters();
+
+            } catch (error) {
+                console.error('Error assigning bug:', error);
+                showMessage(error.message || 'Failed to assign bug', 'error');
             }
         }
 
-        function changeStatus(bugId, newStatus) {
-            const bugIndex = allBugs.findIndex(b => b.id === bugId);
-            if (bugIndex !== -1) {
-                allBugs[bugIndex].status = newStatus;
-                allBugs[bugIndex].updated_at = new Date().toISOString();
+        // Change bug status
+        async function changeStatus(bugId, newStatus) {
+            try {
+                const statusData = { status: newStatus };
 
-                localStorage.setItem('bugify_bugs', JSON.stringify(allBugs));
+                const response = await fetch(`${API_BASE_URL}/manage/bugs/${bugId}/status`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(statusData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail);
+                }
 
                 showMessage(`Bug #${bugId} status updated to "${newStatus}" successfully!`);
 
-                loadData();
-                applyFilters();
+                await loadDataFromAPI();
+                await applyFilters();
+
+            } catch (error) {
+                console.error('Error updating status:', error);
+                showMessage(error.message || 'Failed to update status', 'error');
             }
         }
 
+        // Get user name by ID
         function getUserName(userId) {
             if (!userId) return 'Unassigned';
-            const user = allUsers.find(u => u.id === userId || u.id === String(userId));
-            return user ? user.name : 'Unknown User';
+            const user = allUsers.find(u => u.id === userId);
+            return user ? user.name : userId;
         }
 
-        function showMessage(text) {
+        // Show message
+        function showMessage(text, type = 'success') {
             const messageEl = document.getElementById('message');
             messageEl.textContent = text;
-            messageEl.className = 'message success show';
+            messageEl.className = `message ${type} show`;
 
             setTimeout(() => {
                 messageEl.classList.remove('show');
-            }, 3000);
+            }, 4000);
         }
 
+        // Render bugs table
         function renderBugs() {
             const tbody = document.getElementById('bugs-tbody');
             const noBugs = document.getElementById('no-bugs');
@@ -797,50 +900,52 @@
                 const assignedClass = isAssigned ? 'assigned' : 'unassigned';
 
                 return `
-                <tr>
-                    <td>#${bug.id}</td>
-                    <td>
-                        <div class="bug-title">${bug.title}</div>
-                        <div class="bug-description" title="${bug.description}">${bug.description}</div>
-                    </td>
-                    <td>${bug.project_name}</td>
-                    <td>
-                        <span class="priority-badge ${bug.priority.toLowerCase()}">${bug.priority}</span>
-                    </td>
-                    <td>${getUserName(bug.reported_by)}</td>
-                    <td>
-                        <select 
-                            class="developer-select ${assignedClass}" 
-                            onchange="assignBug(${bug.id}, this.value)"
-                        >
-                            <option value="unassigned" ${!isAssigned ? 'selected' : ''}>Unassigned</option>
-                            ${developers.map(dev => `
+            <tr>
+                <td>#${bug.id}</td>
+                <td>
+                    <div class="bug-title">${bug.title}</div>
+                    <div class="bug-description" title="${bug.description}">${bug.description}</div>
+                </td>
+                <td>${bug.project_name}</td>
+                <td>
+                    <span class="priority-badge ${bug.priority.toLowerCase()}">${bug.priority}</span>
+                </td>
+                <td>${getUserName(bug.reported_by)}</td>
+                <td>
+                    <select
+                        class="developer-select ${assignedClass}"
+                        onchange="assignBug(${bug.id}, this.value)"
+                    >
+                        <option value="unassigned" ${!isAssigned ? 'selected' : ''}>Unassigned</option>
+                        ${developers.map(dev => `
                                 <option value="${dev.id}" ${String(bug.assigned_to) === String(dev.id) ? 'selected' : ''}>
                                     ${dev.name}
                                 </option>
                             `).join('')}
-                        </select>
-                    </td>
-                    <td>
-                        <select 
-                            class="status-select ${bug.status.toLowerCase().replace(' ', '-')}" 
-                            onchange="changeStatus(${bug.id}, this.value)"
-                        >
-                            <option value="Open" ${bug.status === 'Open' ? 'selected' : ''}>Open</option>
-                            <option value="In Progress" ${bug.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                            <option value="Resolved" ${bug.status === 'Resolved' ? 'selected' : ''}>Resolved</option>
-                            <option value="Closed" ${bug.status === 'Closed' ? 'selected' : ''}>Closed</option>
-                        </select>
-                    </td>
-                </tr>
-                `;
+                    </select>
+                </td>
+                <td>
+                    <select
+                        class="status-select ${bug.status.toLowerCase().replace(' ', '-')}"
+                        onchange="changeStatus(${bug.id}, this.value)"
+                    >
+                        <option value="Open" ${bug.status === 'Open' ? 'selected' : ''}>Open</option>
+                        <option value="In Progress" ${bug.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="Resolved" ${bug.status === 'Resolved' ? 'selected' : ''}>Resolved</option>
+                        <option value="Closed" ${bug.status === 'Closed' ? 'selected' : ''}>Closed</option>
+                    </select>
+                </td>
+            </tr>
+            `;
             }).join('');
         }
 
+        // Open create project modal
         function openCreateProjectModal() {
             document.getElementById('createProjectModal').classList.add('show');
         }
 
+        // Close modal
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('show');
 
@@ -850,58 +955,118 @@
             }
         }
 
-        function createProject(event) {
+        // Create project
+        async function createProject(event) {
             event.preventDefault();
 
             const projectName = document.getElementById('projectName').value.trim();
             const projectDescription = document.getElementById('projectDescription').value.trim();
 
             if (!projectName) {
-                alert('Please enter a project name');
+                showMessage('Please enter a project name', 'error');
                 return;
             }
 
-            const newProjectId = allProjects.length > 0
-                ? Math.max(...allProjects.map(p => p.id)) + 1
-                : 1;
+            if (projectName.length < 3) {
+                showMessage('Project name must be at least 3 characters long', 'error');
+                return;
+            }
 
-            const newProject = {
-                id: newProjectId,
-                name: projectName,
-                description: projectDescription,
-                createdBy: currentUser.id,
-                createdAt: new Date().toISOString()
-            };
+            // Disable submit button
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating...';
 
-            allProjects.push(newProject);
+            try {
+                const response = await fetch(`${API_BASE_URL}/projects/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        name: projectName,
+                        description: projectDescription
+                    })
+                });
 
-            localStorage.setItem('bugify_projects', JSON.stringify(allProjects));
+                const data = await response.json();
 
-            showMessage(`Project "${projectName}" created successfully!`);
+                if (!response.ok) {
+                    showMessage(data.detail || 'Failed to create project', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                    return;
+                }
 
-            closeModal('createProjectModal');
+                showMessage(`Project "${projectName}" created successfully!`);
 
-            loadData();
-            populateProjectSelector();
+                closeModal('createProjectModal');
+
+                // Reload data
+                await loadDataFromAPI();
+                populateProjectSelector();
+
+            } catch (error) {
+                console.error('Error creating project:', error);
+                showMessage('Network error. Please check your connection and try again.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
         }
 
-        window.addEventListener('storage', function (e) {
-            if (e.key === 'bugify_bugs' || e.key === 'bugify_projects' || e.key === 'bugify_users') {
-                loadData();
-                populateProjectSelector();
-                applyFilters();
+        // Delete project
+        async function deleteProject(projectId, projectName) {
+            if (!confirm(`Are you sure you want to delete project "${projectName}"? This action cannot be undone.`)) {
+                return;
             }
-        });
 
-        document.addEventListener('visibilitychange', function () {
-            if (!document.hidden) {
-                loadData();
+            try {
+                const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showMessage(data.detail || 'Failed to delete project', 'error');
+                    return;
+                }
+
+                showMessage(data.message || `Project "${projectName}" deleted successfully!`);
+
+                // Reload data
+                await loadDataFromAPI();
                 populateProjectSelector();
-                applyFilters();
-            }
-        });
 
+                // Reset filter if deleted project was selected
+                if (currentProject === String(projectId)) {
+                    currentProject = 'all';
+                    document.getElementById('project-select').value = 'all';
+                }
+
+                await applyFilters();
+
+            } catch (error) {
+                console.error('Error deleting project:', error);
+                showMessage('Network error. Please check your connection and try again.', 'error');
+            }
+        }
+
+        // Auto-refresh data every 30 seconds
+        setInterval(async () => {
+            if (document.hidden) return;
+            await loadDataFromAPI();
+            await applyFilters();
+        }, 30000);
+
+        // Initialize on load
         init();
+
     </script>
 </body>
 
