@@ -395,7 +395,7 @@
             authToken = localStorage.getItem('bugify_token');
 
             if (!userStr || !authToken) {
-                window.location.href = 'index.html';
+                window.location.href = 'login.html';
                 return false;
             }
 
@@ -416,7 +416,7 @@
                     if (response.status === 401) {
                         localStorage.removeItem('bugify_currentUser');
                         localStorage.removeItem('bugify_token');
-                        window.location.href = 'index.html';
+                        window.location.href = 'login.html';
                         return false;
                     }
                     throw new Error('Failed to fetch projects');
@@ -483,7 +483,7 @@
         function logout() {
             localStorage.removeItem('bugify_currentUser');
             localStorage.removeItem('bugify_token');
-            window.location.href = 'index.html?logout=success';
+            window.location.href = 'login.html?logout=success';
         }
 
         // Populate projects dropdown

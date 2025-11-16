@@ -57,11 +57,12 @@ jobs:
 
       - name: Run tests
         env:
-          MONGODB_URL: ${{ secrets.MONGODB_URL }}
-          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          ALGORITHM: ${{ secrets.ALGORITHM }}
-          ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}
+          ENV: test
+          MONGODB_URL: ${{ secrets.MONGODB_URL_TEST }}
+          DATABASE_NAME: ${{ secrets.DATABASE_NAME_TEST }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET_TEST }}
+          JWT_ALGORITHM: HS256
+          ACCESS_TOKEN_EXPIRE_MINUTES: 30
         run: pytest -v --maxfail=1 --disable-warnings --junitxml=pytest-report.xml
 
       - name: Upload test results
