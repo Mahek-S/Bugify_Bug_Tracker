@@ -1,69 +1,47 @@
-# 🐞 Bugify - Bug Tracker
+# Bugify - Bug Tracker
 
-**Bugify** is a simple yet extensible web-based Bug Tracking System developed as part of the SDL (Software Development Lifecycle) project.  
-The project follows Agile methodology and implements Continuous Integration (CI) testing using GitHub Actions.
-
----
-
-## 🚀 Current Progress
-
-### ✅ Sprint 1
-- Requirement Analysis
-- SRS Documentation
-
-### ✅ Sprint 2
-- Frontend Implementation (HTML, CSS, JS)
-- LocalStorage-based User Authentication
-- Role-based access (Admin/User)
-- Dashboard with Search & Filters
-
-### 🛠️ Upcoming Sprints
-- Backend (FastAPI + MongoDB)
-- API Integration
-- Automated Testing (Unit + Integration)
-- CI/CD Pipeline Integration
-- Deployment
+Bugify is a web-based Bug Tracking System that helps manage bugs efficiently. The project implements a **backend with FastAPI + MongoDB**, a **frontend with HTML, CSS, and JavaScript**, and a **CI/CD pipeline** using **GitHub Actions**.
 
 ---
 
-## 🧩 Tech Stack
+## Features
 
-| Layer | Technology |
-|--------|-------------|
-| Frontend | HTML, CSS, JavaScript |
-| Backend | FastAPI, MongoDB (planned) |
-| CI/CD | GitHub Actions |
-| Testing | ESLint (frontend), Pytest (backend) |
+**Frontend:**  
+- HTML, CSS, JavaScript interface  
+- User authentication (LocalStorage-based)  
+- Role-based access (Admin/User)  
+- Dashboard with search and filters  
 
----
+**Backend:**  
+- FastAPI REST APIs  
+- MongoDB database integration  
+- Authentication using JWT & password hashing  
+- Automated unit and integration tests using pytest  
 
-## ⚙️ Project Structure
+**Testing:**  
+- Backend: automated tests with pytest  
+- Frontend: manual unit & integration verification  
+- System & End-to-End testing: complete application workflows tested manually  
 
-bugify-bug-tracker/
-│
-├── frontend/ # HTML, CSS, JS files
-├── backend/ # Backend (FastAPI - upcoming)
-├── .github/
-│ └── workflows/ # CI pipeline configs
-├── README.md
-└── .gitignore
-
----
-
-## 🧪 Continuous Integration (CI)
-
-Frontend CI currently runs:
-- ESLint for code quality check on every commit or pull request.
-
-Planned Enhancements:
-- Add Jest tests for frontend logic.
-- Integrate backend testing via Pytest once backend is ready.
+**CI/CD Pipeline:**  
+- Backend CI: runs automated tests and validates FastAPI startup  
+- Frontend CI: runs ESLint and requires manual verification  
+- Ensures stable, production-ready builds and safe merges  
 
 ---
 
-## 👩‍💻 Author
+## Tech Stack
+
+| Layer       | Technology                       |
+|------------|----------------------------------|
+| Frontend   | HTML, CSS, JavaScript            |
+| Backend    | FastAPI, MongoDB                 |
+| Testing    | Pytest (backend), Manual (frontend) |
+| CI/CD      | GitHub Actions (backend tests + ESLint frontend) |
+
+---
+
+## Author
 
 **Mahek S.**  
-*Software Development Lifecycle Project — CI Testing for Web Applications*
-
-
+Software Development Lifecycle Project — CI Testing for Web Applications
