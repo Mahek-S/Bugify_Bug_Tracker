@@ -2,11 +2,11 @@ name: Backend CI - Tests
 
 on:
   push:
-    branches: [ feature/backend-testing, main ]
+    branches: ['**']
     paths:
       - 'backend/**'
   pull_request:
-    branches: [ main ]
+    branches: ['**']
     paths:
       - 'backend/**'
 
