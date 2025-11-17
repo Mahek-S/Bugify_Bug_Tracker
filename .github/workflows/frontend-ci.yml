@@ -2,13 +2,9 @@ name: Frontend CI
 
 on:
   push:
-    branches: ['**']        
-    paths:
-      - 'frontend/**'        
+    branches: [ main, dev, feature/* ]
   pull_request:
-    branches: ['**']         
-    paths:
-      - 'frontend/**'   
+    branches: [ main, dev ]   
       
 jobs:
   lint-and-test:
